@@ -228,7 +228,10 @@ def parse_command_line
     ["--max-identifier",      GetoptLong::REQUIRED_ARGUMENT],
     ["--max-moves",           GetoptLong::REQUIRED_ARGUMENT],
     ["--pid-file",            GetoptLong::REQUIRED_ARGUMENT],
-    ["--player-log-dir",      GetoptLong::REQUIRED_ARGUMENT])
+    ["--player-log-dir",      GetoptLong::REQUIRED_ARGUMENT],
+    ["--tcpkeepalive-idle",   GetoptLong::REQUIRED_ARGUMENT],
+    ["--tcpkeepalive-intvl",  GetoptLong::REQUIRED_ARGUMENT],
+    ["--tcpkeepalive-cnt",    GetoptLong::REQUIRED_ARGUMENT])
   parser.quiet = true
   begin
     parser.each_option do |name, arg|
@@ -308,6 +311,15 @@ def check_command_line
 
   $options["least-time-per-move"] ||= ShogiServer::Default_Least_Time_Per_Move
   $options["least-time-per-move"] = $options["least-time-per-move"].to_i
+
+  $options["tcpkeepalive-idle"] ||= ShogiServer::Default_TcpKeepAlive_Idle
+  $options["tcpkeepalive-idle"] = $options["tcpkeepalive-idle"].to_i
+
+  $options["tcpkeepalive-intvl"] ||= ShogiServer::Default_TcpKeepAlive_Intvl
+  $options["tcpkeepalive-intvl"] = $options["tcpkeepalive-intvl"].to_i
+
+  $options["tcpkeepalive-cnt"] ||= ShogiServer::Default_TcpKeepAlive_Cnt
+  $options["tcpkeepalive-cnt"] = $options["tcpkeepalive-cnt"].to_i
 end
 
 # See if a file can be created in the directory.
@@ -489,8 +501,30 @@ def main
   server.start do |client|
     begin
       # client.sync = true # this is already set in WEBrick 
-      client.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
-        # Keepalive time can be set by /proc/sys/net/ipv4/tcp_keepalive_time
+      if Socket.const_defined?(:SOL_SOCKET) &&
+        Socket.const_defined?(:SO_KEEPALIVE) &&
+        Socket.const_defined?(:IPPROTO_TCP)
+        client.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+          # Keepalive time can be set by /proc/sys/net/ipv4/tcp_keepalive_time
+        if Socket.const_defined?(:TCP_KEEPIDLE) &&
+          Socket.const_defined?(:TCP_KEEPINTVL) &&
+          Socket.const_defined?(:TCP_KEEPCNT)
+          client.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPIDLE, $options["tcpkeepalive-idle"])
+          client.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPINTVL, $options["tcpkeepalive-intvl"])
+          client.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPCNT, $options["tcpkeepalive-cnt"])
+        elsif RUBY_PLATFORM.downcase =~ /mswin|mingw|cygwin|bccwin/
+          # Windows 10 (1709 or later) ws2ipdef.h
+          # https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options
+          client.setsockopt(Socket::IPPROTO_TCP, 3, $options["tcpkeepalive-idle"])
+          client.setsockopt(Socket::IPPROTO_TCP, 17, $options["tcpkeepalive-intvl"])
+          client.setsockopt(Socket::IPPROTO_TCP, 16, $options["tcpkeepalive-cnt"])
+        elsif RUBY_PLATFORM.downcase =~ /darwin/
+          # macOS 10.12.6 (Sierra) /usr/include/netinet/tcp.h
+          client.setsockopt(Socket::IPPROTO_TCP, 0x10, $options["tcpkeepalive-idle"])
+          client.setsockopt(Socket::IPPROTO_TCP, 0x101, $options["tcpkeepalive-intvl"])
+          client.setsockopt(Socket::IPPROTO_TCP, 0x102, $options["tcpkeepalive-cnt"])
+        end
+      end
       player, login = login_loop(client) # loop
       unless player
         log_error("Detected a timed out login attempt")
