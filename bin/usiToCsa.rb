@@ -103,7 +103,11 @@ def parse_command_line
     ["--password",    GetoptLong::REQUIRED_ARGUMENT],
     ["--ponder",      GetoptLong::NO_ARGUMENT],
     ["--port",        GetoptLong::REQUIRED_ARGUMENT],
-    ["--floodgate",   GetoptLong::NO_ARGUMENT])
+    ["--floodgate",   GetoptLong::NO_ARGUMENT],
+    ["--tcpkeepalive",       GetoptLong::REQUIRED_ARGUMENT],
+    ["--tcpkeepalive-idle",  GetoptLong::REQUIRED_ARGUMENT],
+    ["--tcpkeepalive-intvl", GetoptLong::REQUIRED_ARGUMENT],
+    ["--tcpkeepalive-cnt",   GetoptLong::REQUIRED_ARGUMENT])
   parser.quiet = true
   begin
     parser.each_option do |name, arg|
@@ -131,6 +135,14 @@ def parse_command_line
   options[:port]        ||= ENV["PORT"] || 4081
   options[:port]        = options[:port].to_i
   options[:floodgate]   ||= ENV["FLOODGATE"] || false
+  options[:tcpkeepalive]       ||= ENV["TCPKEEPALIVE"] || 0
+  options[:tcpkeepalive]       = options[:tcpkeepalive].to_i
+  options[:tcpkeepalive_idle]  ||= ENV["TCPKEEPALIVE_IDLE"] || 50
+  options[:tcpkeepalive_idle]  = options[:tcpkeepalive_idle].to_i
+  options[:tcpkeepalive_intvl] ||= ENV["TCPKEEPALIVE_INTVL"] || 5
+  options[:tcpkeepalive_intvl] = options[:tcpkeepalive_intvl].to_i
+  options[:tcpkeepalive_cnt]   ||= ENV["TCPKEEPALIVE_CNT"] || 9
+  options[:tcpkeepalive_cnt]   = options[:tcpkeepalive_cnt].to_i
 
   return options
 end
@@ -623,6 +635,30 @@ def login
   begin
     $server = TCPSocket.open($options[:host], $options[:port])
     $server.sync = true
+    if $options[:tcpkeepalive] > 0 &&
+      Socket.const_defined?(:SOL_SOCKET) &&
+      Socket.const_defined?(:SO_KEEPALIVE) &&
+      Socket.const_defined?(:IPPROTO_TCP)
+      $server.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+      if Socket.const_defined?(:TCP_KEEPIDLE) &&
+        Socket.const_defined?(:TCP_KEEPINTVL) &&
+        Socket.const_defined?(:TCP_KEEPCNT)
+        $server.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPIDLE, $options[:tcpkeepalive_idle])
+        $server.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPINTVL, $options[:tcpkeepalive_intvl])
+        $server.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPCNT, $options[:tcpkeepalive_cnt])
+      elsif RUBY_PLATFORM.downcase =~ /mswin|mingw|cygwin|bccwin/
+        # Windows 10 (1709 or later) ws2ipdef.h
+        # https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options
+        $server.setsockopt(Socket::IPPROTO_TCP, 3, $options[:tcpkeepalive_idle])
+        $server.setsockopt(Socket::IPPROTO_TCP, 17, $options[:tcpkeepalive_intvl])
+        $server.setsockopt(Socket::IPPROTO_TCP, 16, $options[:tcpkeepalive_cnt])
+      elsif RUBY_PLATFORM.downcase =~ /darwin/
+        # macOS 10.12.6 (Sierra) /usr/include/netinet/tcp.h
+        $server.setsockopt(Socket::IPPROTO_TCP, 0x10, $options[:tcpkeepalive_idle])
+        $server.setsockopt(Socket::IPPROTO_TCP, 0x101, $options[:tcpkeepalive_intvl])
+        $server.setsockopt(Socket::IPPROTO_TCP, 0x102, $options[:tcpkeepalive_cnt])
+      end
+    end
   rescue
     log_error "Failed to connect to the server"
     $server = nil
