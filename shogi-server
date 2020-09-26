@@ -412,7 +412,7 @@ def main
   $league.dir = $topdir
 
   config = {}
-  config[:BindAddress] = "0.0.0.0"
+  config[:BindAddress] = nil
   config[:Port]       = port
   config[:ServerType] = WEBrick::Daemon if $options["daemon"]
   config[:Logger]     = $logger
