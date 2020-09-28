@@ -489,7 +489,7 @@ class BridgeState
         str = $server.gets
       }
     rescue Timeout::Error
-      log_error "event_server_recv timeout"
+      $logger.error "event_server_recv timeout"
     end
     return if str.nil? || str.strip.empty?
     log_server_recv str
