@@ -28,6 +28,7 @@ $:.unshift(File.join(File.dirname(File.expand_path(__FILE__)), ".."))
 require 'shogi_server'
 require 'logger'
 require 'socket'
+require 'timeout'
 
 # Global variables
 
@@ -482,7 +483,14 @@ class BridgeState
       throw "Bad state at event_engine_recv: #@state"
     end
 
-    str = $server.gets
+    str = nil
+    begin
+      Timeout.timeout(0.001){
+        str = $server.gets
+      }
+    rescue Timeout::Error
+      log_error "event_server_recv timeout"
+    end
     return if str.nil? || str.strip.empty?
     log_server_recv str
 
@@ -598,9 +606,15 @@ end
 def start_engine
   log_info("Starting engine...  #{$options[:engine_path]}")
 
-  cmd = %Q!| #{$options[:engine_path]}!
-  $engine = open(cmd, "w+")
+  $engine = IO.popen($options[:engine_path], "w+")
   $engine.sync = true
+  if false and RUBY_PLATFORM.downcase =~ /mswin|mingw|cygwin|bccwin|msys/
+    require 'Win32API'
+    get_osfhandle = Win32API.new('msvcrt', '_get_osfhandle', 'I', 'L')
+    set_namedpipehandlestate = Win32API.new('kernel32', 'SetNamedPipeHandleState', 'LPPP', 'I')
+    os_fhandle = get_osfhandle.call($engine.to_i)
+    pipe_res = set_namedpipehandlestate.call(os_fhandle, [1].pack("L"), [0].pack("L"), [0].pack("L"))
+  end
 
   select(nil, [$engine], nil)
   log_engine_send "usi"
