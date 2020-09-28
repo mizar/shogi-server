@@ -717,7 +717,7 @@ end
 #
 def main_loop
   while true
-    ret, = select([$server, $engine], nil, nil, 60)
+    ret, = select([$engine, $server], nil, nil, 60)
     unless ret
       # Send keep-alive
       if $bridge_state.too_quiet?
@@ -727,13 +727,13 @@ def main_loop
       next
     end
 
-    ret.each do |io|
-      case io
-      when $engine
-        $bridge_state.do_engine_recv
-      when $server
-        $bridge_state.do_sever_recv
-      end
+    # Ignore false notifications that both $engine and $server are available,
+    # even if $server has no incoming data (Occurs on Windows)
+    case ret[0]
+    when $engine
+      $bridge_state.do_engine_recv
+    when $server
+      $bridge_state.do_sever_recv
     end
 
     if $bridge_state.GAME_END?
@@ -745,7 +745,7 @@ def main_loop
 
   if $engine.nil?
     $engine.close
-    $engile = nil
+    $engine = nil
   end
 
   if $server.nil?
