@@ -248,7 +248,7 @@ class Game
   # class Game
   def handle_one_move(str, player, end_time)
     unless turn?(player)
-      return false if str == :timeout
+      return false if (str == :timeout || str == :keepalive || str == :space)
 
       @fh.puts("'Deferred %s" % [str])
       log_warning("Deferred a move [%s] scince it is not %s 's turn." %
@@ -263,7 +263,7 @@ class Game
 
     if (@time_clock.timeout?(@current_player, @start_time, @end_time))
       status = :timeout
-    elsif (str == :timeout)
+    elsif (str == :timeout || str == :keepalive || str == :space)
       return false            # time isn't expired. players aren't swapped. continue game
     else
       t = @time_clock.process_time(@current_player, @start_time, @end_time)

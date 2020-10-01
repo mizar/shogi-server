@@ -157,6 +157,10 @@ module ShogiServer
 
     def call
       @player.write_safe("\n")
+      if (@player.status == "game")
+        s = @player.game.handle_one_move(:keepalive, @player, @time)
+        return :return if (s && @player.protocol == LoginCSA::PROTOCOL)
+      end
       return :continue
     end
   end
@@ -685,6 +689,10 @@ module ShogiServer
 
     def call
       ## ignore null string
+      if (@player.status == "game")
+        s = @player.game.handle_one_move(:space, @player, @time)
+        return :return if (s && @player.protocol == LoginCSA::PROTOCOL)
+      end
       return :continue
     end
   end
