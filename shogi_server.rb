@@ -46,7 +46,7 @@ require 'shogi_server/buoy'
 module ShogiServer # for a namespace
 
 Max_Identifier_Length = 32
-Default_Timeout = 60            # for single socket operation
+Default_Timeout = 28            # for single socket operation
 Default_Game_Name = "default-1500-0"
 Default_Max_Moves = 256
 Default_Least_Time_Per_Move = 0
