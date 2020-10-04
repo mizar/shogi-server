@@ -28,7 +28,7 @@ module ShogiServer
     def Command.factory(str, player, time=Time.now)
       cmd = nil
       case str
-      when "", /^%[^%]/, :timeout
+      when "", /^\s*$/, /^%[^%]/, :timeout
         cmd = SpecialCommand.new(str, player)
       when /^[\+\-][^%]/
         cmd = MoveCommand.new(str, player)
@@ -108,8 +108,6 @@ module ShogiServer
         new_buoy_game = nil
         nth_move      = nil
         cmd = ForkCommand.new(str, player, source_game, new_buoy_game, nth_move)
-      when /^\s*$/
-        cmd = SpaceCommand.new(str, player)
       when /^%%%[^%]/
         # TODO: just ignore commands specific to 81Dojo.
         # Need to discuss with 81Dojo people.
@@ -172,7 +170,7 @@ module ShogiServer
     end
   end
 
-  # Command like "%TORYO", :timeout, or keep alive
+  # Command like "%TORYO", :timeout, space, or keep alive
   #
   # Keep Alive is an application-level protocol. Whenever the server receives
   # an LF, it sends back an LF.  Note that the 30 sec rule (client may not send
@@ -189,6 +187,9 @@ module ShogiServer
       if @str == "" # keep alive
         log_debug("received keep alive from #{@player.name}")
         @player.write_safe("\n")
+        # Fall back to :timeout to check the game gets timed up
+        @str = :timeout
+      elsif /^\s+$/ =~ @str
         # Fall back to :timeout to check the game gets timed up
         @str = :timeout
       end
@@ -669,19 +670,6 @@ module ShogiServer
       # This command is only available for CSA's official testing server.
       # So, this means nothing for this program.
       @player.write_safe("CHALLENGE ACCEPTED\n")
-      return :continue
-    end
-  end
-
-  # Command for a space
-  #
-  class SpaceCommand < Command
-    def initialize(str, player)
-      super
-    end
-
-    def call
-      ## ignore null string
       return :continue
     end
   end
