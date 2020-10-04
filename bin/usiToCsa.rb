@@ -739,7 +739,7 @@ def main_loop
 
   if $engine.nil?
     $engine.close
-    $engile = nil
+    $engine = nil
   end
 
   if $server.nil?
