@@ -90,7 +90,12 @@ class TestFactoryMethod < Test::Unit::TestCase
 
   def test_keep_alive_command
     cmd = ShogiServer::Command.factory("", @p)
-    assert_instance_of(ShogiServer::KeepAliveCommand, cmd)
+    assert_instance_of(ShogiServer::SpecialCommand, cmd)
+  end
+
+  def test_keep_alive_command_space
+    cmd = ShogiServer::Command.factory(" ", @p)
+    assert_instance_of(ShogiServer::SpecialCommand, cmd)
   end
 
   def test_move_command
@@ -214,7 +219,7 @@ class TestFactoryMethod < Test::Unit::TestCase
   end
 
   def test_space_command
-    cmd = ShogiServer::Command.factory(" ", @p)
+    cmd = ShogiServer::Command.factory("  ", @p)
     assert_instance_of(ShogiServer::SpaceCommand, cmd)
   end
 
@@ -315,20 +320,6 @@ end
 
 #
 #
-class TestKeepAliveCommand < Test::Unit::TestCase 
-  def setup
-    @p = MockPlayer.new
-  end
-
-  def test_call
-    cmd = ShogiServer::KeepAliveCommand.new("", @p)
-    rc = cmd.call
-    assert_equal(:continue, rc)
-  end
-end
-
-#
-#
 class TestMoveCommand < Test::Unit::TestCase
   def setup
     @p = MockPlayer.new
@@ -348,6 +339,13 @@ class TestMoveCommand < Test::Unit::TestCase
     rc = cmd.call
     assert_equal(:continue, rc)
     assert_equal("'*comment", @game.log.first)
+  end
+
+  def test_comment_illegal
+    cmd = ShogiServer::MoveCommand.new("+7776FU 'comment", @p)
+    rc = cmd.call
+    assert_equal(:continue, rc)
+    assert_nil(@game.log.first)
   end
 
   def test_x1_return
@@ -414,6 +412,18 @@ class TestSpecialComand < Test::Unit::TestCase
   def test_error
     @p.status = "should_be_ignored"
     cmd = ShogiServer::SpecialCommand.new(:timeout, @p)
+    rc = cmd.call
+    assert_equal(:continue, rc)
+  end
+
+  def test_keep_alive
+    cmd = ShogiServer::SpecialCommand.new("", @p)
+    rc = cmd.call
+    assert_equal(:continue, rc)
+  end
+
+  def test_keep_alive_space
+    cmd = ShogiServer::SpecialCommand.new(" ", @p)
     rc = cmd.call
     assert_equal(:continue, rc)
   end
@@ -822,7 +832,7 @@ class TestSpaceCommand < Test::Unit::TestCase
   end
 
   def test_call
-    cmd = ShogiServer::SpaceCommand.new("", @p)
+    cmd = ShogiServer::SpaceCommand.new("  ", @p)
     rc = cmd.call
 
     assert_equal(:continue, rc)
