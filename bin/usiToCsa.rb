@@ -102,6 +102,7 @@ def parse_command_line
     ["--margin-msec", GetoptLong::REQUIRED_ARGUMENT],
     ["--options",     GetoptLong::REQUIRED_ARGUMENT],
     ["--password",    GetoptLong::REQUIRED_ARGUMENT],
+    ["--game",        GetoptLong::REQUIRED_ARGUMENT],
     ["--ponder",      GetoptLong::NO_ARGUMENT],
     ["--port",        GetoptLong::REQUIRED_ARGUMENT],
     ["--floodgate",   GetoptLong::NO_ARGUMENT],
@@ -132,6 +133,7 @@ def parse_command_line
   options[:keep_alive]  = options[:keep_alive].to_i
   options[:log_dir]     ||= ENV["LOG_DIR"] || "."
   options[:password]    ||= ENV["PASSWORD"]
+  options[:game]        ||= ENV["GAME"]
   options[:ponder]      ||= ENV["PONDER"] || false
   options[:port]        ||= ENV["PORT"] || 4081
   options[:port]        = options[:port].to_i
@@ -704,6 +706,15 @@ def login
       log_error("Login attempt to the server timed out")
       $server.close
       $server = nil
+    end
+
+    if not $game.nil? and select(nil, [$server], nil, 15)
+      $server.puts "%%GAME #{$options[:game]}"
+    else
+      log_error("Failed to send login message to the server")
+      $server.close
+      $server = nil
+      return false
     end
   rescue Exception => ex
     log_error("login_loop: #{ex.class}: #{ex.message}\n\t#{ex.backtrace[0]}")
