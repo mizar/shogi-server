@@ -472,7 +472,10 @@ class BridgeState
           @cp *= -1
         end
       end
-      if /(\s+|^)pv\s+(.*)$/ =~str
+      if /^(.*)\s+pv/ =~ str
+        @ex = $1
+      end
+      if /(\s+|^)pv\s+(.*)$/ =~ str
         @pv = $2
       end
     end
@@ -573,9 +576,9 @@ class BridgeState
     end
     
     if moves.empty?
-      return "'* #@cp"
+      return "'* #@cp ' #@ex"
     else
-      return "'* #@cp #{moves.join(" ")}"
+      return "'* #@cp #{moves.join(" ")} ' #@ex"
     end
   end
 end # class BridgeState
