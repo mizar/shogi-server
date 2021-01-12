@@ -2,7 +2,7 @@
 
 while true
 do
-  $(dirname $0)/usiToCsa.rb --host 160.16.80.27 --floodgate --ponder --keep-alive=60 --options 'USI_Ponder=true,PV_Interval=0,MaxMovesToDraw=512,UCT_NodeLimit=50000000,DNN_Model1=model.onnx,DNN_Model2=model.onnx,DNN_Model3=model.onnx,DNN_Model4=model.onnx,DNN_Model5=model.onnx,DNN_Model6=model.onnx,DNN_Model7=model.onnx,DNN_Model8=model.onnx,UCT_Threads1=3,UCT_Threads2=3,UCT_Threads3=3,UCT_Threads4=3,UCT_Threads5=3,UCT_Threads6=3,UCT_Threads7=3,UCT_Threads8=3,DNN_Batch_Size1=256,DNN_Batch_Size2=256,DNN_Batch_Size3=256,DNN_Batch_Size4=256,DNN_Batch_Size5=256,DNN_Batch_Size6=256,DNN_Batch_Size7=256,DNN_Batch_Size8=256,MateSearchPly=5' /workspace/YaneuraOu-by-gcc
+  $(dirname $0)/usiToCsa.rb --host 160.16.80.27 --floodgate --ponder --keep-alive=60 --hash=4096 --options 'USI_Ponder=true,PV_Interval=500,MaxMovesToDraw=512,UCT_NodeLimit=50000000,UCT_Threads1=3,UCT_Threads2=3,UCT_Threads3=3,UCT_Threads4=3,UCT_Threads5=3,UCT_Threads6=3,UCT_Threads7=3,UCT_Threads8=3,DNN_Batch_Size1=256,MateSearchPly=5' /workspace/deep_avx2
 
   if [ $? -ne 0 ] ; then
     logger -s "$ID: Sleeping..."
